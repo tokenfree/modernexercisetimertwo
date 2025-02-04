@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercise Timer</title>
+    <style>
+        body {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.5s ease;
+        }
+
+        #timerContainer {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        #time {
+            font-size: 6rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        #round {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .controlButton {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 18px;
+            color: #ffffff;
+            background: #3b82f6;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            outline: none;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .controlButton:hover {
+            background-color: #2563eb;
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .controlButton:active {
+            background-color: #1d4ed8;
+        }
+
+        .durationControl {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .durationControl button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .durationControl button:hover {
+            background-color: #2563eb;
+        }
+
+        .durationControl span {
+            font-size: 1.2rem;
+            color: #1f2937;
+        }
+
+        #soundToggle {
+            margin-top: 20px;
+        }
+
+        #soundToggle label {
+            color: #1f2937;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="timerContainer">
+        <h1 id="status">Break</h1>
+        <div id="time">00:03</div>
+        <div id="round">Round 1/15</div>
+        <button id="startButton" class="controlButton">Start</button>
+        <button id="resetButton" class="controlButton">Restart</button>
+        <div class="durationControl">
+            <span>Active Duration</span>
+            <button id="decreaseActive">-</button>
+            <span id="activeDuration">00:05</span>
+            <button id="increaseActive">+</button>
+        </div>
+        <div class="durationControl">
+            <span>Break Duration</span>
+            <button id="decreaseBreak">-</button>
+            <span id="breakDuration">00:03</span>
+            <button id="increaseBreak">+</button>
+        </div>
+        <div class="durationControl">
+            <span>Rounds</span>
+            <button id="decreaseRounds">-</button>
+            <span id="rounds">15</span>
+            <button id="increaseRounds">+</button>
+        </div>
+        <div id="soundToggle">
+            <input type="checkbox" id="enableSound" checked>
+            <label for="enableSound">Enable Sound</label>
+        </div>
+    </div>
+
+    <script>
+        let timer;
+        let isActive = false;
+        let time = 3;
+        let activeDuration = 5;
+        let breakDuration = 3;
+        let rounds = 15;
+        let currentRound = 1;
+        let isBreak = true;
+        let beepSound;
+        let stopSound;
+
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const timeDisplay = document.getElementById('time');
+        const roundDisplay = document.getElementById('round');
+        const statusDisplay = document.getElementById('status');
+        const activeDurationDisplay = document.getElementById('activeDuration');
+        const breakDurationDisplay = document.getElementById('breakDuration');
+        const roundsDisplay = document.getElementById('rounds');
+        const enableSoundCheckbox = document.getElementById('enableSound');
+
+        // Load the sounds
+        beepSound = new Audio('sounds/beep.mp3');
+        stopSound = new Audio('sounds/stop.mp3');
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            timeDisplay.textContent = formatTime(time);
+            roundDisplay.textContent = `Round ${currentRound}/${rounds}`;
+            statusDisplay.textContent = isBreak ? 'Break' : 'Active';
+            activeDurationDisplay.textContent = formatTime(activeDuration);
+            breakDurationDisplay.textContent = formatTime(breakDuration);
+            roundsDisplay.textContent = rounds;
+            
+            // Update background color based on the current phase
+            document.body.style.backgroundColor = isBreak ? 'white' : '#ff8da1';
+        }
+
+        function playBeep() {
+            if (enableSoundCheckbox.checked) {
+                beepSound.play();
+            }
+        }
+
+        function playStop() {
+            if (enableSoundCheckbox.checked) {
+                stopSound.play();
+            }
+        }
+
+        function startTimer() {
+            if (!isActive) {
+                isActive = true;
+                startButton.textContent = 'Pause';
+                timer = setInterval(() => {
+                    if (time > 0) {
+                        if (time <= 3 && time > 0) {
+                            playBeep(); // Play beep for last 3 seconds
+                        }
+                        time--;
+                    } else {
+                        playStop(); // Play stop sound when countdown reaches 0
+                        if (isBreak) {
+                            if (currentRound === rounds) {
+                                clearInterval(timer);
+                                isActive = false;
+                                startButton.textContent = 'Start';
+                                return;
+                            }
+                            currentRound++;
+                            isBreak = false;
+                            time = activeDuration;
+                        } else {
+                            isBreak = true;
+                            time = breakDuration;
+                        }
+                    }
+                    updateDisplay();
+                }, 1000);
+            } else {
+                clearInterval(timer);
+                isActive = false;
+                startButton.textContent = 'Resume';
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timer);
+            isActive = false;
+            time = breakDuration;
+            currentRound = 1;
+            isBreak = true;
+            startButton.textContent = 'Start';
+            updateDisplay();
+        }
+
+        startButton.addEventListener('click', startTimer);
+        resetButton.addEventListener('click', resetTimer);
+
+        document.getElementById('decreaseActive').addEventListener('click', () => {
+            if (activeDuration > 1) activeDuration--;
+            updateDisplay();
+        });
+
+        document.getElementById('increaseActive').addEventListener('click', () => {
+            activeDuration++;
+            updateDisplay();
+        });
+
+        document.getElementById('decreaseBreak').addEventListener('click', () => {
+            if (breakDuration > 1) breakDuration--;
+            updateDisplay();
+        });
+
+        document.getElementById('increaseBreak').addEventListener('click', () => {
+            breakDuration++;
+            updateDisplay();
+        });
+
+        document.getElementById('decreaseRounds').addEventListener('click', () => {
+            if (rounds > 1) rounds--;
+            updateDisplay();
+        });
+
+        document.getElementById('increaseRounds').addEventListener('click', () => {
+            rounds++;
+            updateDisplay();
+        });
+
+        // Initialize the display
+        updateDisplay();
+    </script>
+</body>
+</html>
